@@ -3,8 +3,8 @@ import playwright_stealth
 from .async_manager import async_manager
 from utils import parse_proxy
 from .fingerprint import (
-    CANVAS_SPOOFING_SCRIPT, AUDIO_SPOOFING_SCRIPT, FONTS_SPOOFING_SCRIPT,
-    HARDWARE_SPOOFING_SCRIPT, WEBGL_SPOOFING_SCRIPT
+    CANVAS_PATCH_SCRIPT, AUDIO_PATCH_SCRIPT, FONTS_PATCH_SCRIPT,
+    HARDWARE_PATCH_SCRIPT, WEBGL_PATCH_SCRIPT, USER_AGENT_DATA_PATCH_SCRIPT
 )
 
 PROFILES_DIR = "profiles"
@@ -21,14 +21,12 @@ async def launch_browser(profile, start_url=None):
     proxy_input = profile.get("proxy")
     proxy_protocol = profile.get("proxy_protocol", "HTTP")
 
-    full_proxy_url = None
+    proxy_dict = None
     if proxy_input:
         try:
-            full_proxy_url = parse_proxy(proxy_input, proxy_protocol)
+            proxy_dict = parse_proxy(proxy_input, proxy_protocol)
         except ValueError as e:
             print(f"Skipping invalid proxy for profile {profile['name']}: {e}")
-
-    proxy_dict = {"server": full_proxy_url} if full_proxy_url else None
 
     browser_context = await p.chromium.launch_persistent_context(
         user_data_dir=profile_path,
@@ -48,15 +46,18 @@ async def launch_browser(profile, start_url=None):
 
     # Inject all fingerprinting scripts
     fingerprint = profile.get("fingerprint", {})
-    await page.evaluate_on_new_document(CANVAS_SPOOFING_SCRIPT, fingerprint.get("canvas_seed", 12345))
-    await page.evaluate_on_new_document(AUDIO_SPOOFING_SCRIPT)
-    await page.evaluate_on_new_document(FONTS_SPOOFING_SCRIPT)
+    if 'user_agent_data' in fingerprint:
+        await page.evaluate_on_new_document(USER_AGENT_DATA_PATCH_SCRIPT, fingerprint['user_agent_data'])
+
+    await page.evaluate_on_new_document(CANVAS_PATCH_SCRIPT, fingerprint.get("canvas_seed", 12345))
+    await page.evaluate_on_new_document(AUDIO_PATCH_SCRIPT)
+    await page.evaluate_on_new_document(FONTS_PATCH_SCRIPT)
     await page.evaluate_on_new_document(
-        HARDWARE_SPOOFING_SCRIPT,
+        HARDWARE_PATCH_SCRIPT,
         {"concurrency": fingerprint.get("hardware_concurrency", 8), "memory": fingerprint.get("device_memory", 16)}
     )
     await page.evaluate_on_new_document(
-        WEBGL_SPOOFING_SCRIPT,
+        WEBGL_PATCH_SCRIPT,
         {"vendor": fingerprint.get("webgl_vendor", "Google Inc."), "renderer": fingerprint.get("webgl_renderer", "ANGLE")}
     )
 

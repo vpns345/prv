@@ -8,15 +8,14 @@ from utils import get_geo_from_proxy, test_proxy
 from engine.profile_manager import generate_fingerprint
 
 
-with open("user_agents.json", "r") as f:
-    USER_AGENTS = json.load(f)
-
-
 class ConfigWindow(QDialog):
     def __init__(self, profile, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"Configure Profile: {profile['name']}")
         self.profile = profile
+
+        with open("fingerprint_data.json", "r") as f:
+            self.fingerprints_data = json.load(f)
 
         self.layout = QVBoxLayout(self)
         self.form_layout = QFormLayout()
@@ -30,22 +29,24 @@ class ConfigWindow(QDialog):
         self.ua_layout.addWidget(self.randomize_ua_btn)
         self.populate_user_agents()
         self.randomize_ua_btn.clicked.connect(self.randomize_user_agent)
+        self.user_agent_combo.currentTextChanged.connect(self.on_user_agent_changed)
 
         self.screen_width_input = QSpinBox()
         self.screen_width_input.setRange(320, 3840)
-        self.screen_width_input.setValue(profile.get("screen_width", 1920))
+        self.screen_width_input.setValue(self.profile.get("screen_width", 1920))
         self.screen_height_input = QSpinBox()
         self.screen_height_input.setRange(600, 2160)
-        self.screen_height_input.setValue(profile.get("screen_height", 1080))
-        self.timezone_input = QLineEdit(profile.get("timezone", ""))
-        self.latitude_input = QLineEdit(str(profile.get("latitude", "")))
-        self.longitude_input = QLineEdit(str(profile.get("longitude", "")))
+        self.screen_height_input.setValue(self.profile.get("screen_height", 1080))
+
+        self.timezone_input = QLineEdit(self.profile.get("timezone", ""))
+        self.latitude_input = QLineEdit(str(self.profile.get("latitude", "")))
+        self.longitude_input = QLineEdit(str(self.profile.get("longitude", "")))
 
         self.proxy_protocol_combo = QComboBox()
         self.proxy_protocol_combo.addItems(["HTTP", "SOCKS5"])
-        self.proxy_protocol_combo.setCurrentText(profile.get("proxy_protocol", "HTTP"))
+        self.proxy_protocol_combo.setCurrentText(self.profile.get("proxy_protocol", "HTTP"))
 
-        self.proxy_input = QLineEdit(profile.get("proxy", ""))
+        self.proxy_input = QLineEdit(self.profile.get("proxy", ""))
         self.fetch_geo_btn = QPushButton("Fetch from Proxy")
         self.test_proxy_btn = QPushButton("Test Proxy")
 
@@ -56,7 +57,7 @@ class ConfigWindow(QDialog):
         self.proxy_layout.addWidget(self.test_proxy_btn)
 
         self.webrtc_checkbox = QCheckBox("Disable WebRTC")
-        self.webrtc_checkbox.setChecked(profile.get("disable_webrtc", True))
+        self.webrtc_checkbox.setChecked(self.profile.get("disable_webrtc", True))
 
         self.form_layout.addRow(self.ua_label, self.ua_layout)
         self.form_layout.addRow("Screen Width:", self.screen_width_input)
@@ -89,20 +90,26 @@ class ConfigWindow(QDialog):
 
     def populate_user_agents(self):
         self.user_agent_combo.clear()
-        profile_type = self.profile.get("profile_type", "Desktop").lower()
+        profile_type = self.profile.get("profile_type", "Desktop")
 
-        ua_list = []
-        if profile_type in USER_AGENTS:
-            for platform in USER_AGENTS[profile_type]:
-                ua_list.extend(USER_AGENTS[profile_type][platform])
+        self.compatible_fingerprints = [fp for fp in self.fingerprints_data if fp["profile_type"] == profile_type]
+        ua_list = [fp["user_agent"] for fp in self.compatible_fingerprints]
 
         self.user_agent_combo.addItems(ua_list)
 
         current_ua = self.profile.get("user_agent")
-        if current_ua and current_ua in ua_list:
+        if current_ua in ua_list:
             self.user_agent_combo.setCurrentText(current_ua)
         elif ua_list:
             self.user_agent_combo.setCurrentIndex(0)
+
+    def on_user_agent_changed(self, user_agent):
+        # Find the corresponding fingerprint and update screen resolution
+        for fp in self.compatible_fingerprints:
+            if fp["user_agent"] == user_agent:
+                self.screen_width_input.setValue(fp["screen_width"])
+                self.screen_height_input.setValue(fp["screen_height"])
+                break
 
     def randomize_user_agent(self):
         if self.user_agent_combo.count() > 0:
@@ -110,7 +117,14 @@ class ConfigWindow(QDialog):
             self.user_agent_combo.setCurrentIndex(index)
 
     def save_config(self):
-        self.profile["user_agent"] = self.user_agent_combo.currentText()
+        # Find the full fingerprint details for the selected User-Agent
+        selected_ua = self.user_agent_combo.currentText()
+        selected_fp = next((fp for fp in self.compatible_fingerprints if fp["user_agent"] == selected_ua), None)
+
+        if selected_fp:
+            self.profile["fingerprint"].update(selected_fp)
+            self.profile.update(selected_fp)
+
         self.profile["screen_width"] = self.screen_width_input.value()
         self.profile["screen_height"] = self.screen_height_input.value()
         self.profile["timezone"] = self.timezone_input.text()
@@ -127,7 +141,6 @@ class ConfigWindow(QDialog):
         if not proxy_str:
             QMessageBox.warning(self, "Warning", "Please enter a proxy string.")
             return
-
         try:
             geo_data = get_geo_from_proxy(proxy_str, protocol)
             if geo_data:
@@ -146,7 +159,6 @@ class ConfigWindow(QDialog):
         if not proxy_str:
             QMessageBox.warning(self, "Warning", "Please enter a proxy string.")
             return
-
         success, message = test_proxy(proxy_str, protocol)
         if success:
             QMessageBox.information(self, "Proxy Test Success", message)
@@ -156,12 +168,10 @@ class ConfigWindow(QDialog):
     def refresh_fingerprint(self):
         new_fingerprint = generate_fingerprint(self.profile.get("profile_type", "Desktop"))
         self.profile["fingerprint"] = new_fingerprint
-        self.profile["user_agent"] = new_fingerprint["user_agent"]
-        self.profile["screen_width"] = new_fingerprint["screen_width"]
-        self.profile["screen_height"] = new_fingerprint["screen_height"]
+        self.profile.update(new_fingerprint)
 
         # Update UI fields
-        self.populate_user_agents() # This will select the new UA
+        self.populate_user_agents() # This will re-populate and select the new UA
         self.screen_width_input.setValue(self.profile["screen_width"])
         self.screen_height_input.setValue(self.profile["screen_height"])
         QMessageBox.information(self, "Success", "Fingerprint has been refreshed.")

@@ -1,23 +1,31 @@
-# AbdullahBot v5.0 - Bulk Operations Suite
+# AbdullahBot v6.0 - Final Version
 
-This is the final, most comprehensive version of AbdullahBot, a professional-grade anti-detect browser and automation tool built with Python, PyQt6, and Playwright.
+AbdullahBot is a professional-grade anti-detect browser and automation tool built with Python, PyQt6, and Playwright. It is designed to manage multiple browser profiles with unique, spoofed fingerprints to bypass advanced detection systems like BrowserScan and iphey.com.
 
-**Version 5.0 introduces a full suite of Bulk Operation features to make managing large numbers of profiles fast and efficient.** It also includes all the critical bug fixes and elite stealth upgrades from v4.0.
+**Version 6.0 is the final, polished version, focusing on critical bug fixes and elite-level stealth.**
 
 ## Core Features
 
-- **Playwright Engine**: The core is built on Playwright with `playwright-stealth` for a more modern and undetectable automation experience.
-- **Advanced Fingerprint Spoofing**: Each profile gets a new, randomized, but consistent fingerprint to bypass advanced detection systems.
-- **Robust Network Management**: Reliable proxy handling (HTTP/SOCKS5) with a built-in tester and DNS leak protection.
-- **Multi-threaded Automation**: Launch hundreds of browser profiles simultaneously and navigate them to a target URL.
+- **Playwright Engine**: The core is built on Playwright with `playwright-stealth` for a modern and undetectable automation experience.
+- **Elite Fingerprint Spoofing**: Each profile gets a new, randomized, and consistent fingerprint.
+  - **Client Hints (`userAgentData`)**: Full spoofing of `navigator.userAgentData` to ensure perfect consistency with the User-Agent string, a critical feature for passing modern detection sites.
+  - **Canvas, AudioContext, WebGL, Fonts**: Intelligent spoofing to prevent tracking.
+  - **Hardware & Geolocation**: Spoofing of hardware, timezone, and location properties.
+- **Robust Network Management**:
+  - **Authenticated Proxy Support**: Native handling of authenticated proxies (`user:pass`) without annoying OS popups.
+  - **Protocol Selector**: UI dropdown to easily select between HTTP and SOCKS5 proxies.
+  - **DNS Leak Protection**: All DNS requests are routed through the SOCKS5 proxy.
+  - **Proxy Tester**: A built-in tool to test proxy connectivity before use.
+- **Multi-threaded Automation**:
+  - Launch hundreds of browser profiles simultaneously.
+  - A "Stop All" button to gracefully close all running sessions.
 
-## v5.0 - The Bulk Operations Suite
+## Workflow Features
 
-- **Multi-Select**: The main profile list now supports selecting multiple profiles (using Ctrl+Click or Shift+Click).
-- **Bulk Delete**: Select multiple profiles and delete them all with a single confirmation.
-- **Bulk Proxy Assignment**: Paste a list of proxies into a dialog to have them automatically assigned to all selected profiles.
-- **Bulk Fingerprint Randomization**: Instantly generate new, unique fingerprints for all selected profiles with one click.
-- **Bulk Session Control**: A "Stop All" button allows you to immediately and gracefully close all running browser sessions launched by the application.
+- **User-Agent Based Resolution**: Screen resolution is now automatically set to a realistic value based on the selected User-Agent's device type.
+- **Bulk Operations**: A full suite of tools for managing profiles at scale.
+  - **Multi-Select**: Select and manage multiple profiles at once.
+  - **Bulk Create, Delete, Proxy Assignment, and Fingerprint Randomization**.
 
 ## How to Use
 
@@ -31,13 +39,11 @@ This is the final, most comprehensive version of AbdullahBot, a professional-gra
 
 `python main.py`
 
-### Bulk Operations
+### Profile Management
 
-1.  **Select Profiles**: Hold Ctrl or Shift and click to select multiple profiles in the list.
-2.  **Choose Action**:
-    - Click **"Bulk Delete"** to delete all selected profiles.
-    - Click **"Bulk Set Proxies"** to open a dialog and paste a list of proxies to assign.
-    - Click **"Bulk Randomize Fingerprints"** to assign new identities to all selected profiles.
-3.  **Control Automation**:
-    - Click **"Start Automation"** to launch all selected profiles.
-    - Click **"Stop All"** to close all running sessions.
+- **Create**: Click "Create New Profile", enter a name, and choose a profile type (Desktop or Mobile).
+- **Configure**: Select a profile and click "Configure".
+  - **Proxy**: Select the protocol (HTTP/SOCKS5), enter your proxy (`host:port` or `host:port:user:pass`), and click "Test Proxy" to verify it.
+  - **Geolocation**: Click "Fetch from Proxy" to auto-fill location data based on the proxy's IP.
+  - **Fingerprint**: Click "Refresh Fingerprint" to generate a new identity. The User-Agent and screen resolution will update automatically.
+- **Launch**: Select one or more profiles and click "Start Automation" to launch them.

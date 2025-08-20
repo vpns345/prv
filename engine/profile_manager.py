@@ -22,24 +22,26 @@ import random
 import json
 
 def generate_fingerprint(profile_type="Desktop"):
-    with open("user_agents.json", "r") as f:
-        user_agents = json.load(f)
+    with open("fingerprint_data.json", "r") as f:
+        fingerprints = json.load(f)
 
-    ua_list = []
-    if profile_type.lower() in user_agents:
-        for platform in user_agents[profile_type.lower()]:
-            ua_list.extend(user_agents[profile_type.lower()][platform])
+    # Filter fingerprints by the desired profile type
+    compatible_fingerprints = [fp for fp in fingerprints if fp["profile_type"] == profile_type]
+    if not compatible_fingerprints:
+        raise ValueError(f"No fingerprints found for profile type: {profile_type}")
 
-    return {
-        "user_agent": random.choice(ua_list) if ua_list else "",
-        "screen_width": random.choice([1920, 1680, 1440]) if profile_type == "Desktop" else random.choice([390, 414, 375]),
-        "screen_height": random.choice([1080, 1050, 900]) if profile_type == "Desktop" else random.choice([844, 896, 812]),
+    # Select one complete fingerprint profile at random
+    base_fingerprint = random.choice(compatible_fingerprints)
+
+    # Add the remaining randomized hardware details
+    base_fingerprint.update({
         "hardware_concurrency": random.choice([4, 6, 8, 12, 16]),
         "device_memory": random.choice([8, 16]),
         "webgl_vendor": "Google Inc. (NVIDIA)",
         "webgl_renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1080 Ti Direct3D11 vs_5_0 ps_5_0, D3D11)",
         "canvas_seed": random.randint(10000, 99999),
-    }
+    })
+    return base_fingerprint
 
 def create_profile(profile_name, profile_type="Desktop"):
     profiles = load_profiles()
@@ -55,16 +57,16 @@ def create_profile(profile_name, profile_type="Desktop"):
     new_profile = {
         "name": profile_name,
         "profile_type": profile_type,
-        "user_agent": fingerprint["user_agent"],
-        "screen_width": fingerprint["screen_width"],
-        "screen_height": fingerprint["screen_height"],
+        "proxy_protocol": "HTTP",
+        "proxy": "",
         "timezone": "",
         "latitude": "",
         "longitude": "",
-        "proxy": "",
         "disable_webrtc": True,
         "fingerprint": fingerprint
     }
+    # Add main fingerprint values to top level for easy access
+    new_profile.update(fingerprint)
     profiles.append(new_profile)
     save_profiles(profiles)
     return new_profile

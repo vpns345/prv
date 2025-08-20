@@ -3,7 +3,7 @@ import re
 
 def parse_proxy(proxy_input: str, protocol: str):
     """
-    Parses different proxy formats and constructs a valid URL.
+    Parses different proxy formats and returns a dictionary for Playwright.
     Expected formats:
     - host:port
     - host:port:user:pass
@@ -12,17 +12,21 @@ def parse_proxy(proxy_input: str, protocol: str):
         return None
 
     parts = proxy_input.split(':')
+    if len(parts) not in [2, 4]:
+        raise ValueError("Invalid proxy format. Use host:port or host:port:user:pass")
+
     host = parts[0]
     port = parts[1]
+    server = f"{protocol.lower()}://{host}:{port}"
 
     if len(parts) == 4:
-        user = parts[2]
-        password = parts[3]
-        return f"{protocol.lower()}://{user}:{password}@{host}:{port}"
-    elif len(parts) == 2:
-        return f"{protocol.lower()}://{host}:{port}"
-    else:
-        raise ValueError("Invalid proxy format. Use host:port or host:port:user:pass")
+        return {
+            "server": server,
+            "username": parts[2],
+            "password": parts[3]
+        }
+    else: # len(parts) == 2
+        return {"server": server}
 
 def get_geo_from_proxy(proxy_input: str, protocol: str):
     """
@@ -31,14 +35,16 @@ def get_geo_from_proxy(proxy_input: str, protocol: str):
     if not proxy_input:
         return None
 
-    host = proxy_input.split(':')[0]
-    if not host:
-        raise ValueError("Could not extract host from proxy string")
-
     try:
         # Use a proxy to make the geo API request itself, to test the proxy
-        # This is a bit redundant with test_proxy but good for this specific function
-        full_proxy_url = parse_proxy(proxy_input, protocol)
+        proxy_dict = parse_proxy(proxy_input, protocol)
+        # requests library needs a different format than playwright
+        full_proxy_url = proxy_dict['server']
+        if 'username' in proxy_dict:
+            # Rebuild the URL for requests
+            proto, url = full_proxy_url.split('://')
+            full_proxy_url = f"{proto}://{proxy_dict['username']}:{proxy_dict['password']}@{url}"
+
         proxies = {"http": full_proxy_url, "https": full_proxy_url}
         response = requests.get("http://ip-api.com/json/", proxies=proxies, timeout=10)
         response.raise_for_status()
@@ -51,7 +57,7 @@ def get_geo_from_proxy(proxy_input: str, protocol: str):
             }
         else:
             raise Exception(f"API Error: {data.get('message')}")
-    except requests.exceptions.RequestException as e:
+    except (requests.exceptions.RequestException, ValueError) as e:
         raise Exception(f"Failed to connect to geo API: {e}")
 
 def test_proxy(proxy_input: str, protocol: str):
@@ -63,7 +69,12 @@ def test_proxy(proxy_input: str, protocol: str):
         return False, "Proxy string is empty."
 
     try:
-        full_proxy_url = parse_proxy(proxy_input, protocol)
+        proxy_dict = parse_proxy(proxy_input, protocol)
+        full_proxy_url = proxy_dict['server']
+        if 'username' in proxy_dict:
+            proto, url = full_proxy_url.split('://')
+            full_proxy_url = f"{proto}://{proxy_dict['username']}:{proxy_dict['password']}@{url}"
+
         proxies = {
             "http": full_proxy_url,
             "https": full_proxy_url,
