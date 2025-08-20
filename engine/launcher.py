@@ -1,5 +1,5 @@
 import os
-from playwright_stealth import stealth_async
+import playwright_stealth
 from .async_manager import async_manager
 from .fingerprint import (
     CANVAS_SPOOFING_SCRIPT, AUDIO_SPOOFING_SCRIPT, FONTS_SPOOFING_SCRIPT,
@@ -33,7 +33,7 @@ async def launch_browser(profile, start_url=None):
     )
 
     page = browser_context.pages[0]
-    await stealth_async(page)
+    await playwright_stealth.stealth_async(page)
 
     # Inject all fingerprinting scripts
     fingerprint = profile.get("fingerprint", {})
