@@ -1,6 +1,8 @@
-# AbdullahBot v3.0 - Professional Anti-Detect Browser
+# AbdullahBot v4.0 - Elite Stealth Browser
 
 AbdullahBot is a professional-grade anti-detect browser and automation tool built with Python, PyQt6, and Playwright. It is designed to manage multiple browser profiles with unique, spoofed fingerprints to bypass advanced detection systems.
+
+**Version 4.0 focuses on critical bug fixes and achieving an elite level of stealth to pass sites like BrowserScan and iphey.com.**
 
 ## Core Features
 

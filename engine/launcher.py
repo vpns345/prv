@@ -1,6 +1,7 @@
 import os
 import playwright_stealth
 from .async_manager import async_manager
+from utils import parse_proxy
 from .fingerprint import (
     CANVAS_SPOOFING_SCRIPT, AUDIO_SPOOFING_SCRIPT, FONTS_SPOOFING_SCRIPT,
     HARDWARE_SPOOFING_SCRIPT, WEBGL_SPOOFING_SCRIPT
@@ -17,13 +18,23 @@ async def launch_browser(profile, start_url=None):
     if not os.path.exists(profile_path):
         os.makedirs(profile_path)
 
-    proxy_server = profile.get("proxy")
-    proxy_dict = {"server": proxy_server} if proxy_server else None
+    proxy_input = profile.get("proxy")
+    proxy_protocol = profile.get("proxy_protocol", "HTTP")
+
+    full_proxy_url = None
+    if proxy_input:
+        try:
+            full_proxy_url = parse_proxy(proxy_input, proxy_protocol)
+        except ValueError as e:
+            print(f"Skipping invalid proxy for profile {profile['name']}: {e}")
+
+    proxy_dict = {"server": full_proxy_url} if full_proxy_url else None
 
     browser_context = await p.chromium.launch_persistent_context(
         user_data_dir=profile_path,
         headless=False,
         proxy=proxy_dict,
+        channel="chrome",
         args=['--disable-blink-features=AutomationControlled'],
         user_agent=profile.get("user_agent"),
         viewport={
@@ -49,7 +60,12 @@ async def launch_browser(profile, start_url=None):
         {"vendor": fingerprint.get("webgl_vendor", "Google Inc."), "renderer": fingerprint.get("webgl_renderer", "ANGLE")}
     )
 
+    print(f"Launching profile {profile['name']}. Target URL: {start_url}")
     if start_url:
-        await page.goto(start_url)
+        try:
+            await page.goto(start_url, timeout=60000)
+            print(f"Successfully navigated to {start_url} for profile {profile['name']}")
+        except Exception as e:
+            print(f"Error navigating to {start_url} for profile {profile['name']}: {e}")
 
     return browser_context, page

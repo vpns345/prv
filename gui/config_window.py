@@ -40,10 +40,17 @@ class ConfigWindow(QDialog):
         self.timezone_input = QLineEdit(profile.get("timezone", ""))
         self.latitude_input = QLineEdit(str(profile.get("latitude", "")))
         self.longitude_input = QLineEdit(str(profile.get("longitude", "")))
+
+        self.proxy_protocol_combo = QComboBox()
+        self.proxy_protocol_combo.addItems(["HTTP", "SOCKS5"])
+        self.proxy_protocol_combo.setCurrentText(profile.get("proxy_protocol", "HTTP"))
+
         self.proxy_input = QLineEdit(profile.get("proxy", ""))
         self.fetch_geo_btn = QPushButton("Fetch from Proxy")
         self.test_proxy_btn = QPushButton("Test Proxy")
+
         self.proxy_layout = QHBoxLayout()
+        self.proxy_layout.addWidget(self.proxy_protocol_combo)
         self.proxy_layout.addWidget(self.proxy_input)
         self.proxy_layout.addWidget(self.fetch_geo_btn)
         self.proxy_layout.addWidget(self.test_proxy_btn)
@@ -110,17 +117,19 @@ class ConfigWindow(QDialog):
         self.profile["latitude"] = self.latitude_input.text()
         self.profile["longitude"] = self.longitude_input.text()
         self.profile["proxy"] = self.proxy_input.text()
+        self.profile["proxy_protocol"] = self.proxy_protocol_combo.currentText()
         self.profile["disable_webrtc"] = self.webrtc_checkbox.isChecked()
         self.accept()
 
     def fetch_geo_data(self):
         proxy_str = self.proxy_input.text()
+        protocol = self.proxy_protocol_combo.currentText()
         if not proxy_str:
             QMessageBox.warning(self, "Warning", "Please enter a proxy string.")
             return
 
         try:
-            geo_data = get_geo_from_proxy(proxy_str)
+            geo_data = get_geo_from_proxy(proxy_str, protocol)
             if geo_data:
                 self.timezone_input.setText(geo_data.get("timezone", ""))
                 self.latitude_input.setText(str(geo_data.get("latitude", "")))
@@ -133,11 +142,12 @@ class ConfigWindow(QDialog):
 
     def test_proxy_connection(self):
         proxy_str = self.proxy_input.text()
+        protocol = self.proxy_protocol_combo.currentText()
         if not proxy_str:
             QMessageBox.warning(self, "Warning", "Please enter a proxy string.")
             return
 
-        success, message = test_proxy(proxy_str)
+        success, message = test_proxy(proxy_str, protocol)
         if success:
             QMessageBox.information(self, "Proxy Test Success", message)
         else:

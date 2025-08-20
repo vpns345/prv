@@ -34,7 +34,7 @@ def generate_fingerprint(profile_type="Desktop"):
         "user_agent": random.choice(ua_list) if ua_list else "",
         "screen_width": random.choice([1920, 1680, 1440]) if profile_type == "Desktop" else random.choice([390, 414, 375]),
         "screen_height": random.choice([1080, 1050, 900]) if profile_type == "Desktop" else random.choice([844, 896, 812]),
-        "hardware_concurrency": random.choice([8, 12, 16]),
+        "hardware_concurrency": random.choice([4, 6, 8, 12, 16]),
         "device_memory": random.choice([8, 16]),
         "webgl_vendor": "Google Inc. (NVIDIA)",
         "webgl_renderer": "ANGLE (NVIDIA, NVIDIA GeForce GTX 1080 Ti Direct3D11 vs_5_0 ps_5_0, D3D11)",
