@@ -108,6 +108,18 @@ class MainWindow(QMainWindow):
             if profile:
                 self.launch_browser_task(profile)
 
+    def configure_selected_profile(self):
+        profile_name = self.get_selected_profile_name()
+        if profile_name:
+            profiles = load_profiles()
+            profile = next((p for p in profiles if p["name"] == profile_name), None)
+            if profile:
+                dialog = ConfigWindow(profile, self)
+                if dialog.exec():
+                    updated_profile = dialog.get_profile()
+                    update_profile(updated_profile)
+                    QMessageBox.information(self, "Success", "Profile updated successfully.")
+
     def start_automation(self):
         target_url = self.target_url_input.text()
         if not target_url:
