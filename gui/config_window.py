@@ -4,7 +4,8 @@ from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QLineEdit, QPushButton, QLabel,
     QFormLayout, QSpinBox, QCheckBox, QHBoxLayout, QMessageBox, QComboBox
 )
-from utils import get_geo_from_proxy
+from utils import get_geo_from_proxy, test_proxy
+from engine.profile_manager import generate_fingerprint
 
 
 with open("user_agents.json", "r") as f:
@@ -41,9 +42,11 @@ class ConfigWindow(QDialog):
         self.longitude_input = QLineEdit(str(profile.get("longitude", "")))
         self.proxy_input = QLineEdit(profile.get("proxy", ""))
         self.fetch_geo_btn = QPushButton("Fetch from Proxy")
+        self.test_proxy_btn = QPushButton("Test Proxy")
         self.proxy_layout = QHBoxLayout()
         self.proxy_layout.addWidget(self.proxy_input)
         self.proxy_layout.addWidget(self.fetch_geo_btn)
+        self.proxy_layout.addWidget(self.test_proxy_btn)
 
         self.webrtc_checkbox = QCheckBox("Disable WebRTC")
         self.webrtc_checkbox.setChecked(profile.get("disable_webrtc", True))
@@ -60,13 +63,20 @@ class ConfigWindow(QDialog):
         self.layout.addLayout(self.form_layout)
 
         self.fetch_geo_btn.clicked.connect(self.fetch_geo_data)
+        self.test_proxy_btn.clicked.connect(self.test_proxy_connection)
 
         self.save_button = QPushButton("Save")
         self.cancel_button = QPushButton("Cancel")
+        self.refresh_fingerprint_btn = QPushButton("Refresh Fingerprint")
 
-        self.layout.addWidget(self.save_button)
-        self.layout.addWidget(self.cancel_button)
+        self.button_box = QHBoxLayout()
+        self.button_box.addWidget(self.refresh_fingerprint_btn)
+        self.button_box.addStretch()
+        self.button_box.addWidget(self.save_button)
+        self.button_box.addWidget(self.cancel_button)
+        self.layout.addLayout(self.button_box)
 
+        self.refresh_fingerprint_btn.clicked.connect(self.refresh_fingerprint)
         self.save_button.clicked.connect(self.save_config)
         self.cancel_button.clicked.connect(self.reject)
 
@@ -120,6 +130,31 @@ class ConfigWindow(QDialog):
                 QMessageBox.warning(self, "Warning", "Could not fetch geolocation data.")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"An error occurred: {e}")
+
+    def test_proxy_connection(self):
+        proxy_str = self.proxy_input.text()
+        if not proxy_str:
+            QMessageBox.warning(self, "Warning", "Please enter a proxy string.")
+            return
+
+        success, message = test_proxy(proxy_str)
+        if success:
+            QMessageBox.information(self, "Proxy Test Success", message)
+        else:
+            QMessageBox.critical(self, "Proxy Test Failed", message)
+
+    def refresh_fingerprint(self):
+        new_fingerprint = generate_fingerprint(self.profile.get("profile_type", "Desktop"))
+        self.profile["fingerprint"] = new_fingerprint
+        self.profile["user_agent"] = new_fingerprint["user_agent"]
+        self.profile["screen_width"] = new_fingerprint["screen_width"]
+        self.profile["screen_height"] = new_fingerprint["screen_height"]
+
+        # Update UI fields
+        self.populate_user_agents() # This will select the new UA
+        self.screen_width_input.setValue(self.profile["screen_width"])
+        self.screen_height_input.setValue(self.profile["screen_height"])
+        QMessageBox.information(self, "Success", "Fingerprint has been refreshed.")
 
     def get_profile(self):
         return self.profile

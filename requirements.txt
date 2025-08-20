@@ -1,5 +1,4 @@
 PyQt6
-selenium
-selenium-stealth
-webdriver-manager
 requests
+playwright
+playwright-stealth

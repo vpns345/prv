@@ -34,3 +34,26 @@ def get_geo_from_proxy(proxy_str):
             raise Exception(f"API Error: {data.get('message')}")
     except requests.exceptions.RequestException as e:
         raise Exception(f"Failed to connect to geo API: {e}")
+
+def test_proxy(proxy_str):
+    """
+    Tests if a proxy is working by making a request through it.
+    Returns (True, message) on success, (False, message) on failure.
+    """
+    if not proxy_str:
+        return False, "Proxy string is empty."
+
+    proxies = {
+        "http": proxy_str,
+        "https": proxy_str,
+    }
+
+    try:
+        response = requests.get("http://httpbin.org/ip", proxies=proxies, timeout=10)
+        response.raise_for_status()
+        # The response from httpbin.org/ip will contain the proxy's IP if successful
+        return True, f"Proxy is working. IP: {response.json()['origin']}"
+    except requests.exceptions.ProxyError as e:
+        return False, f"Proxy Error: {e}"
+    except requests.exceptions.RequestException as e:
+        return False, f"Request Failed: {e}"
