@@ -18,7 +18,7 @@ def save_profiles(profiles):
         json.dump(profiles, f, indent=4)
 
 
-def create_profile(profile_name):
+def create_profile(profile_name, profile_type="Desktop"):
     profiles = load_profiles()
     if any(p["name"] == profile_name for p in profiles):
         raise ValueError(f"Profile '{profile_name}' already exists.")
@@ -29,9 +29,10 @@ def create_profile(profile_name):
 
     new_profile = {
         "name": profile_name,
+        "profile_type": profile_type,
         "user_agent": "",
-        "screen_width": 1920,
-        "screen_height": 1080,
+        "screen_width": 390 if profile_type == "Mobile" else 1920,
+        "screen_height": 844 if profile_type == "Mobile" else 1080,
         "timezone": "",
         "latitude": "",
         "longitude": "",

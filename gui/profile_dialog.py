@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QPushButton, QLabel
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QPushButton, QLabel, QComboBox
 
 
 class ProfileDialog(QDialog):
@@ -13,6 +13,13 @@ class ProfileDialog(QDialog):
         self.profile_name_input = QLineEdit()
         self.layout.addWidget(self.profile_name_input)
 
+        self.type_label = QLabel("Select profile type:")
+        self.layout.addWidget(self.type_label)
+
+        self.profile_type_combo = QComboBox()
+        self.profile_type_combo.addItems(["Desktop", "Mobile"])
+        self.layout.addWidget(self.profile_type_combo)
+
         self.ok_button = QPushButton("OK")
         self.cancel_button = QPushButton("Cancel")
 
@@ -24,3 +31,6 @@ class ProfileDialog(QDialog):
 
     def get_profile_name(self):
         return self.profile_name_input.text()
+
+    def get_profile_type(self):
+        return self.profile_type_combo.currentText()

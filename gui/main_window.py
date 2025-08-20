@@ -1,7 +1,8 @@
 import sys
+import threading
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout,
-    QListWidget, QPushButton, QHBoxLayout, QMessageBox
+    QListWidget, QPushButton, QHBoxLayout, QMessageBox, QFormLayout, QLineEdit, QSpinBox
 )
 
 from PyQt6.QtWidgets import QInputDialog
@@ -14,7 +15,7 @@ from gui.config_window import ConfigWindow
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Advanced Anti-Detect Browser")
+        self.setWindowTitle("AbdullahBot")
         self.setGeometry(100, 100, 800, 600)
 
         self.central_widget = QWidget()
@@ -24,7 +25,21 @@ class MainWindow(QMainWindow):
         self.drivers = []
 
         self.profile_list = QListWidget()
+        self.profile_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
         self.layout.addWidget(self.profile_list)
+
+        # Automation Panel
+        self.automation_form = QFormLayout()
+        self.target_url_input = QLineEdit()
+        self.num_threads_input = QSpinBox()
+        self.num_threads_input.setRange(1, 10)
+        self.num_threads_input.setValue(1)
+        self.start_automation_btn = QPushButton("Start Automation")
+
+        self.automation_form.addRow("Target URL:", self.target_url_input)
+        self.automation_form.addRow("Number of Threads:", self.num_threads_input)
+        self.automation_form.addRow(self.start_automation_btn)
+        self.layout.addLayout(self.automation_form)
 
         self.button_layout = QHBoxLayout()
         self.layout.addLayout(self.button_layout)
@@ -43,6 +58,7 @@ class MainWindow(QMainWindow):
         self.launch_btn.clicked.connect(self.launch_selected_profile)
         self.configure_btn.clicked.connect(self.configure_selected_profile)
         self.delete_btn.clicked.connect(self.delete_selected_profile)
+        self.start_automation_btn.clicked.connect(self.start_automation)
 
         self.load_profiles_to_list()
 
@@ -50,9 +66,10 @@ class MainWindow(QMainWindow):
         dialog = ProfileDialog(self)
         if dialog.exec():
             profile_name = dialog.get_profile_name()
+            profile_type = dialog.get_profile_type()
             if profile_name:
                 try:
-                    create_profile(profile_name)
+                    create_profile(profile_name, profile_type)
                     self.load_profiles_to_list()
                 except ValueError as e:
                     QMessageBox.warning(self, "Error", str(e))
@@ -100,12 +117,56 @@ class MainWindow(QMainWindow):
         for profile in profiles:
             self.profile_list.addItem(profile["name"])
 
-    def get_selected_profile_name(self):
+    def start_automation(self):
+        target_url = self.target_url_input.text()
+        if not target_url:
+            QMessageBox.warning(self, "Warning", "Please enter a target URL.")
+            return
+
+        selected_profile_names = self.get_selected_profile_names()
+        if not selected_profile_names:
+            return
+
+        num_threads = self.num_threads_input.value()
+
+        profiles = load_profiles()
+        profiles_to_launch = [p for p in profiles if p["name"] in selected_profile_names]
+
+        for i in range(0, len(profiles_to_launch), num_threads):
+            batch = profiles_to_launch[i:i+num_threads]
+            threads = []
+            for profile in batch:
+                thread = threading.Thread(target=self.launch_browser_thread, args=(profile, target_url))
+                threads.append(thread)
+                thread.start()
+
+            for thread in threads:
+                thread.join() # This will run batches sequentially, can be improved later
+
+    def launch_browser_thread(self, profile, url):
+        try:
+            driver = launch_browser(profile, start_url=url)
+            self.drivers.append(driver)
+        except Exception as e:
+            # Since this is in a thread, we can't show a QMessageBox easily.
+            # Print the error to the console for now.
+            print(f"Error launching profile {profile['name']}: {e}")
+
+    def get_selected_profile_names(self):
         selected_items = self.profile_list.selectedItems()
         if not selected_items:
-            QMessageBox.warning(self, "Warning", "Please select a profile.")
+            QMessageBox.warning(self, "Warning", "Please select one or more profiles.")
+            return []
+        return [item.text() for item in selected_items]
+
+    def get_selected_profile_name(self):
+        selected_names = self.get_selected_profile_names()
+        if not selected_names:
             return None
-        return selected_items[0].text()
+        if len(selected_names) > 1:
+            QMessageBox.warning(self, "Warning", "Please select only one profile for this action.")
+            return None
+        return selected_names[0]
 
 
 if __name__ == '__main__':
