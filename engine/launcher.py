@@ -38,7 +38,8 @@ async def launch_browser(profile, start_url=None):
         viewport={
             "width": profile.get("screen_width", 1920),
             "height": profile.get("screen_height", 1080)
-        }
+        },
+        timezone_id=profile.get("timezone")
     )
 
     page = browser_context.pages[0]
@@ -60,6 +61,16 @@ async def launch_browser(profile, start_url=None):
         WEBGL_PATCH_SCRIPT,
         {"vendor": fingerprint.get("webgl_vendor", "Google Inc."), "renderer": fingerprint.get("webgl_renderer", "ANGLE")}
     )
+
+    # Geolocation can still be set via CDP
+    try:
+        if profile.get("latitude") and profile.get("longitude"):
+            await page.context.set_geolocation({
+                "latitude": float(profile.get("latitude")),
+                "longitude": float(profile.get("longitude"))
+            })
+    except Exception as e:
+        print(f"Could not set geolocation for profile {profile['name']}: {e}")
 
     print(f"Launching profile {profile['name']}. Target URL: {start_url}")
     if start_url:
