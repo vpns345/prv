@@ -1,65 +1,43 @@
-# AbdullahBot v4.0 - Elite Stealth Browser
+# AbdullahBot v5.0 - Bulk Operations Suite
 
-AbdullahBot is a professional-grade anti-detect browser and automation tool built with Python, PyQt6, and Playwright. It is designed to manage multiple browser profiles with unique, spoofed fingerprints to bypass advanced detection systems.
+This is the final, most comprehensive version of AbdullahBot, a professional-grade anti-detect browser and automation tool built with Python, PyQt6, and Playwright.
 
-**Version 4.0 focuses on critical bug fixes and achieving an elite level of stealth to pass sites like BrowserScan and iphey.com.**
+**Version 5.0 introduces a full suite of Bulk Operation features to make managing large numbers of profiles fast and efficient.** It also includes all the critical bug fixes and elite stealth upgrades from v4.0.
 
 ## Core Features
 
-- **Playwright Engine**: The core is built on Playwright with `playwright-stealth` for a more modern and undetectable automation experience compared to Selenium.
-- **Isolated Profiles**: Create and manage unlimited browser profiles. Each profile's data (cookies, cache, etc.) is stored in a separate folder, ensuring complete isolation.
-- **Advanced Fingerprint Spoofing**: Each profile gets a new, randomized, but consistent fingerprint.
-  - **Canvas, AudioContext, WebGL, Fonts**: Intelligent spoofing to prevent tracking.
-  - **Hardware & Client Rects**: Spoofing of hardware properties and randomized client rectangle values.
-  - **Automation Signatures**: All Playwright automation signatures are removed.
-- **Mobile Device Emulation**: Create "Mobile" profiles that use Playwright's built-in mobile emulation.
-- **Robust Network Management**:
-  - **Reliable Proxies**: Uses Playwright's native proxy API for reliable HTTP and SOCKS5 connections.
-  - **Proxy Tester**: A built-in tool to test proxy connectivity before use.
-- **Multi-threaded Automation**:
-  - Launch multiple browser profiles simultaneously.
-  - Specify the number of concurrent threads (up to 1000).
-  - Automatically navigate all launched browsers to a target URL.
+- **Playwright Engine**: The core is built on Playwright with `playwright-stealth` for a more modern and undetectable automation experience.
+- **Advanced Fingerprint Spoofing**: Each profile gets a new, randomized, but consistent fingerprint to bypass advanced detection systems.
+- **Robust Network Management**: Reliable proxy handling (HTTP/SOCKS5) with a built-in tester and DNS leak protection.
+- **Multi-threaded Automation**: Launch hundreds of browser profiles simultaneously and navigate them to a target URL.
 
-## Workflow Features
+## v5.0 - The Bulk Operations Suite
 
-- **Bulk Profile Creation**: Generate hundreds of profiles at once with a given name prefix.
-- **Fingerprint Refresh**: Instantly generate a new random fingerprint for any profile with a single click.
-- **IP-Based Geolocation**: Enter a proxy IP, and AbdullahBot will automatically fetch and fill in the correct timezone and geolocation data.
+- **Multi-Select**: The main profile list now supports selecting multiple profiles (using Ctrl+Click or Shift+Click).
+- **Bulk Delete**: Select multiple profiles and delete them all with a single confirmation.
+- **Bulk Proxy Assignment**: Paste a list of proxies into a dialog to have them automatically assigned to all selected profiles.
+- **Bulk Fingerprint Randomization**: Instantly generate new, unique fingerprints for all selected profiles with one click.
+- **Bulk Session Control**: A "Stop All" button allows you to immediately and gracefully close all running browser sessions launched by the application.
 
 ## How to Use
 
 ### Installation
 
 1.  Clone the repository.
-2.  Install the required dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
-3.  Install Playwright's browser binaries:
-    ```bash
-    playwright install
-    ```
+2.  Install the required dependencies: `pip install -r requirements.txt`
+3.  Install Playwright's browser binaries: `playwright install`
 
 ### Running the Application
 
-```bash
-python main.py
-```
+`python main.py`
 
-### Profile Management
+### Bulk Operations
 
-- **Create**: Click "Create New Profile", enter a name, and choose a profile type (Desktop or Mobile).
-- **Bulk Create**: Click "Bulk Create Profiles" to generate many profiles at once.
-- **Configure**: Select a profile and click "Configure".
-  - **Proxy**: Enter your proxy and click "Test Proxy" to verify it.
-  - **Geolocation**: Click "Fetch from Proxy" to auto-fill location data.
-  - **Fingerprint**: Click "Refresh Fingerprint" to generate a new identity.
-- **Launch**: Select a profile and click "Launch Selected Profile".
-
-### Automation
-
-1.  Enter a website in the "Target URL" box.
-2.  Set the "Number of Threads".
-3.  Select one or more profiles from the list (use Ctrl+Click or Shift+Click).
-4.  Click "Start Automation".
+1.  **Select Profiles**: Hold Ctrl or Shift and click to select multiple profiles in the list.
+2.  **Choose Action**:
+    - Click **"Bulk Delete"** to delete all selected profiles.
+    - Click **"Bulk Set Proxies"** to open a dialog and paste a list of proxies to assign.
+    - Click **"Bulk Randomize Fingerprints"** to assign new identities to all selected profiles.
+3.  **Control Automation**:
+    - Click **"Start Automation"** to launch all selected profiles.
+    - Click **"Stop All"** to close all running sessions.

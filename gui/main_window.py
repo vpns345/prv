@@ -7,12 +7,13 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, QObject
 
-from engine.profile_manager import load_profiles, delete_profile, create_profile, update_profile
+from engine.profile_manager import load_profiles, delete_profile, create_profile, update_profile, generate_fingerprint
 from engine.launcher import launch_browser
 from engine.async_manager import async_manager
 from gui.profile_dialog import ProfileDialog
 from gui.config_window import ConfigWindow
 from gui.bulk_create_dialog import BulkCreateDialog
+from gui.bulk_proxy_dialog import BulkProxyDialog
 
 
 class MainWindow(QMainWindow):
@@ -37,11 +38,16 @@ class MainWindow(QMainWindow):
         self.num_threads_input = QSpinBox()
         self.num_threads_input.setRange(1, 1000) # Increased limit
         self.num_threads_input.setValue(3)
+
         self.start_automation_btn = QPushButton("Start Automation")
+        self.stop_automation_btn = QPushButton("Stop All")
+        self.automation_button_layout = QHBoxLayout()
+        self.automation_button_layout.addWidget(self.start_automation_btn)
+        self.automation_button_layout.addWidget(self.stop_automation_btn)
 
         self.automation_form.addRow("Target URL:", self.target_url_input)
         self.automation_form.addRow("Number of Threads:", self.num_threads_input)
-        self.automation_form.addRow(self.start_automation_btn)
+        self.automation_form.addRow(self.automation_button_layout)
         self.layout.addLayout(self.automation_form)
 
         self.button_layout = QHBoxLayout()
@@ -49,12 +55,16 @@ class MainWindow(QMainWindow):
 
         self.create_btn = QPushButton("Create New Profile")
         self.bulk_create_btn = QPushButton("Bulk Create Profiles")
+        self.bulk_proxy_btn = QPushButton("Bulk Set Proxies")
+        self.bulk_randomize_btn = QPushButton("Bulk Randomize Fingerprints")
         self.launch_btn = QPushButton("Launch Selected Profile")
         self.configure_btn = QPushButton("Configure Selected Profile")
         self.delete_btn = QPushButton("Delete Selected Profile")
 
         self.button_layout.addWidget(self.create_btn)
         self.button_layout.addWidget(self.bulk_create_btn)
+        self.button_layout.addWidget(self.bulk_proxy_btn)
+        self.button_layout.addWidget(self.bulk_randomize_btn)
         self.button_layout.addStretch()
         self.button_layout.addWidget(self.launch_btn)
         self.button_layout.addWidget(self.configure_btn)
@@ -62,10 +72,13 @@ class MainWindow(QMainWindow):
 
         self.create_btn.clicked.connect(self.create_new_profile)
         self.bulk_create_btn.clicked.connect(self.bulk_create_profiles)
+        self.bulk_proxy_btn.clicked.connect(self.bulk_set_proxies)
+        self.bulk_randomize_btn.clicked.connect(self.bulk_randomize_fingerprints)
         self.launch_btn.clicked.connect(self.launch_selected_profile)
         self.configure_btn.clicked.connect(self.configure_selected_profile)
         self.delete_btn.clicked.connect(self.delete_selected_profile)
         self.start_automation_btn.clicked.connect(self.start_automation)
+        self.stop_automation_btn.clicked.connect(self.stop_all_sessions)
 
         self.load_profiles_to_list()
 
@@ -99,6 +112,52 @@ class MainWindow(QMainWindow):
 
             self.load_profiles_to_list()
             QMessageBox.information(self, "Success", f"{count} profiles created.")
+
+    def bulk_set_proxies(self):
+        selected_names = self.get_selected_profile_names()
+        if not selected_names:
+            return
+
+        dialog = BulkProxyDialog(self)
+        if dialog.exec():
+            proxies = dialog.get_proxies()
+            if not proxies:
+                return
+
+            profiles = load_profiles()
+
+            for i, profile_name in enumerate(selected_names):
+                if i >= len(proxies):
+                    break # Stop if we run out of proxies
+
+                # Find the profile object
+                profile_to_update = next((p for p in profiles if p["name"] == profile_name), None)
+                if profile_to_update:
+                    profile_to_update["proxy"] = proxies[i]
+                    # Default to HTTP, user can change it via Configure window
+                    profile_to_update["proxy_protocol"] = "HTTP"
+                    update_profile(profile_to_update)
+
+            QMessageBox.information(self, "Success", f"Assigned {min(len(selected_names), len(proxies))} proxies.")
+
+    def bulk_randomize_fingerprints(self):
+        selected_names = self.get_selected_profile_names()
+        if not selected_names:
+            return
+
+        profiles = load_profiles()
+
+        for profile_name in selected_names:
+            profile_to_update = next((p for p in profiles if p["name"] == profile_name), None)
+            if profile_to_update:
+                new_fingerprint = generate_fingerprint(profile_to_update.get("profile_type", "Desktop"))
+                profile_to_update["fingerprint"] = new_fingerprint
+                profile_to_update["user_agent"] = new_fingerprint["user_agent"]
+                profile_to_update["screen_width"] = new_fingerprint["screen_width"]
+                profile_to_update["screen_height"] = new_fingerprint["screen_height"]
+                update_profile(profile_to_update)
+
+        QMessageBox.information(self, "Success", f"Randomized fingerprints for {len(selected_names)} profiles.")
 
     def launch_selected_profile(self):
         profile_name = self.get_selected_profile_name()
@@ -144,12 +203,15 @@ class MainWindow(QMainWindow):
         try:
             browser_context, page = future.result()
             self.browsers.append(browser_context)
-            # We can't easily show a success message for each one without being spammy.
-            # A status bar or log would be better in a future version.
             print(f"Successfully launched browser for profile: {browser_context.options.get('user_data_dir')}")
         except Exception as e:
-            # Still can't show a QMessageBox from a non-main thread easily.
             print(f"Error launching browser: {e}")
+
+    def stop_all_sessions(self):
+        for browser in self.browsers:
+            self.async_manager.schedule(browser.close())
+        self.browsers.clear()
+        QMessageBox.information(self, "Success", "All running browser sessions have been closed.")
 
     def get_selected_profile_names(self):
         selected_items = self.profile_list.selectedItems()
@@ -168,12 +230,20 @@ class MainWindow(QMainWindow):
         return selected_names[0]
 
     def delete_selected_profile(self):
-        profile_name = self.get_selected_profile_name()
-        if profile_name:
-            reply = QMessageBox.question(self, "Confirm Delete", f"Are you sure you want to delete profile '{profile_name}'?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-            if reply == QMessageBox.StandardButton.Yes:
-                delete_profile(profile_name)
-                self.load_profiles_to_list()
+        profile_names = self.get_selected_profile_names()
+        if not profile_names:
+            return
+
+        reply = QMessageBox.question(
+            self, "Confirm Delete",
+            f"Are you sure you want to delete {len(profile_names)} selected profile(s)?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            for name in profile_names:
+                delete_profile(name)
+            self.load_profiles_to_list()
+            QMessageBox.information(self, "Success", f"{len(profile_names)} profiles deleted.")
 
     def load_profiles_to_list(self):
         self.profile_list.clear()
